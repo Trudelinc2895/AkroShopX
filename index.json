@@ -1,0 +1,30 @@
+{
+    "sections": {
+        "hero": {
+            "type": "image-banner",
+            "settings": {
+                "image": "shopify://shop_images/banner-default.jpg",
+                "heading": "Bienvenue sur AkroShopX",
+                "text": "Votre boutique tech & lifestyle – inspirée d’Amazon et Wish",
+                "show_text_box": true,
+                "text_alignment": "center"
+            }
+        },
+        "featured_collection": {
+            "type": "featured-collection",
+            "settings": {
+                "title": "Nos meilleures offres",
+                "collection": "frontpage",
+                "products_to_show": 8
+            }
+        },
+        "rich_text": {
+            "type": "rich-text",
+            "settings": {
+                "title": "Livraison rapide. Qualité garantie.",
+                "text": "Des produits innovants, à portée de clic – AkroShopX, votre marketplace de confiance."
+            }
+        }
+    },
+    "order": ["hero", "featured_collection", "rich_text"]
+}

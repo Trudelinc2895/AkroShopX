@@ -1,0 +1,72 @@
+name: Deploy Shopify Theme
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Shopify CLI
+        run: |
+          npm install -g @shopify/cli @shopify/theme
+
+      - name: Theme Check
+        run: |
+          echo "Running Shopify theme check..."
+          # Shopfy CLI provides theme check; fail the job if issues found
+          shopify theme check || (echo "Theme check failed"; exit 1)
+
+      - name: Validate JSON files
+        run: |
+          echo "Validating JSON files..."
+          find . -type f -name "*.json" -exec jq empty {} \;
+
+      - name: Create theme backup artifact
+        run: |
+          echo "Creating theme zip backup..."
+          BACKUP_NAME=theme-backup-${{ github.run_id }}.zip
+          # exclude common large dirs
+          zip -r "$BACKUP_NAME" . -x "node_modules/*" ".git/*" "*.zip"
+          echo "Backup created: $BACKUP_NAME"
+        # upload as artifact for safe storage in GitHub Actions
+      - name: Upload backup artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: theme-backup-${{ github.run_id }}
+          path: theme-backup-${{ github.run_id }}.zip
+
+      - name: Check syntax errors in Liquid
+        run: |
+          echo "Checking Liquid syntax (naïf)..."
+          # Naive check: look for common unmatched Liquid tags; this is advisory
+          grep -R --exclude-dir=node_modules -n "{% end" || echo "No obvious Liquid end-tags found or grep returned non-zero"
+
+      - name: Authenticate Shopify CLI
+        env:
+          SHOPIFY_SHOP: ${{ secrets.SHOPIFY_SHOP }}
+          SHOPIFY_ADMIN_API_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ADMIN_API_ACCESS_TOKEN }}
+        run: |
+          echo "Authenticating with Shopify..."
+          shopify login --store $SHOPIFY_SHOP --password $SHOPIFY_ADMIN_API_ACCESS_TOKEN
+
+      - name: Deploy Theme
+        env:
+          SHOPIFY_SHOP: ${{ secrets.SHOPIFY_SHOP }}
+          SHOPIFY_ADMIN_API_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ADMIN_API_ACCESS_TOKEN }}
+        run: |
+          echo "Deploying theme to Shopify..."
+          shopify theme push --force --unpublished
