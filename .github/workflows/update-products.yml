@@ -1,0 +1,45 @@
+name: Update Products Daily
+
+# This workflow runs the product scraping pipeline and uploads products to Shopify.
+# It is scheduled to execute at 06:00 UTC every day, which corresponds to
+# 02:00 America/Toronto (Eastern Time) during daylight saving time.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      max_per_category:
+        description: 'Number of products per category to scrape'
+        required: false
+        default: '100'
+      languages:
+        description: 'Languages to fetch (comma separated)'
+        required: false
+        default: 'fr,en'
+
+jobs:
+  update-products:
+    runs-on: ubuntu-latest
+    env:
+      SHOPIFY_SHOP: ${{ secrets.SHOPIFY_SHOP }}
+      SHOPIFY_ADMIN_API_ACCESS_TOKEN: ${{ secrets.SHOPIFY_ADMIN_API_ACCESS_TOKEN }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+
+      - name: Run update script
+        run: |
+          python update-products.py
+        env:
+          MAX_PER_CATEGORY: ${{ github.event.inputs.max_per_category || '100' }}
+          LANGUAGES: ${{ github.event.inputs.languages || 'fr,en' }}
